@@ -5,11 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Omega Key System</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             background: linear-gradient(135deg, #0a0a0a, #1a1a2e);
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -38,11 +34,7 @@
             background-clip: text;
             color: transparent;
         }
-        .sub {
-            color: #888;
-            margin-bottom: 30px;
-            font-size: 14px;
-        }
+        .sub { color: #888; margin-bottom: 30px; font-size: 14px; }
         .box {
             background: rgba(0,0,0,0.5);
             border-radius: 12px;
@@ -73,19 +65,14 @@
             width: 100%;
             margin: 10px 0;
         }
-        button:hover {
-            transform: translateY(-2px);
-        }
-        .copy-btn {
-            background: linear-gradient(135deg, #4facfe, #00f2fe);
-        }
-        .status {
-            margin: 15px 0;
-            padding: 10px;
-            border-radius: 8px;
-        }
+        button:hover { transform: translateY(-2px); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .copy-btn { background: linear-gradient(135deg, #4facfe, #00f2fe); }
+        .status { margin: 15px 0; padding: 10px; border-radius: 8px; }
         .loading { background: rgba(255,255,0,0.1); color: #ff0; }
         .error { background: rgba(255,0,0,0.1); color: #f00; }
+        .cooldown { background: rgba(255,165,0,0.1); color: #ffa500; }
+        .warning { background: rgba(255,165,0,0.05); color: #ffa500; padding: 10px; border-radius: 8px; margin-top: 15px; font-size: 12px; }
         input {
             width: 100%;
             padding: 12px;
@@ -95,11 +82,8 @@
             color: white;
             margin: 10px 0;
         }
-        .footer {
-            margin-top: 20px;
-            font-size: 12px;
-            color: #555;
-        }
+        .footer { margin-top: 20px; font-size: 12px; color: #555; }
+        hr { border-color: rgba(255,255,255,0.1); margin: 20px 0; }
     </style>
 </head>
 <body>
@@ -111,7 +95,6 @@
 
     <script>
         const API_URL = 'https://omega-key.onrender.com';
-        
         const urlParams = new URLSearchParams(window.location.search);
         const token = urlParams.get('token');
         
@@ -126,10 +109,40 @@
         }
         
         function showMainMenu(div) {
+            // Check local storage for cooldown
+            let cooldownEnd = localStorage.getItem('cooldownEnd');
+            let isCooldown = false;
+            let remainingTime = 0;
+            
+            if (cooldownEnd) {
+                remainingTime = parseInt(cooldownEnd) - Date.now();
+                if (remainingTime > 0) {
+                    isCooldown = true;
+                } else {
+                    localStorage.removeItem('cooldownEnd');
+                }
+            }
+            
+            let cooldownHtml = '';
+            if (isCooldown) {
+                const hours = Math.floor(remainingTime / (60 * 60 * 1000));
+                const minutes = Math.floor((remainingTime % (60 * 60 * 1000)) / (60 * 1000));
+                const seconds = Math.floor((remainingTime % (60 * 1000)) / 1000);
+                cooldownHtml = `
+                    <div class="cooldown" id="cooldownMsg">
+                        ⏳ Cooldown: ${hours}h ${minutes}m ${seconds}s until you can generate another key
+                    </div>
+                    <div class="warning">
+                        Premium keys have NO cooldown and NEVER expire. Contact the seller to upgrade.
+                    </div>
+                `;
+            }
+            
             div.innerHTML = `
                 <div class="box">
                     <p>Generate a new 6-hour key</p>
-                    <button id="generateBtn">GENERATE NEW KEY</button>
+                    <button id="generateBtn" ${isCooldown ? 'disabled' : ''}>GENERATE NEW KEY</button>
+                    ${cooldownHtml}
                 </div>
                 <hr>
                 <div class="box">
@@ -137,14 +150,44 @@
                     <input type="text" id="existingKey" placeholder="Paste your key here">
                     <button id="useExistingBtn">VALIDATE KEY</button>
                 </div>
-                <div class="footer">Normal keys expire after 6 hours. Premium keys never expire.</div>
+                <div class="footer">Normal keys expire after 6 hours.<br>You can generate 1 key every 6 hours.<br>Premium keys never expire and have no cooldown.</div>
             `;
-            document.getElementById('generateBtn').onclick = () => requestNewKey();
+            
+            const generateBtn = document.getElementById('generateBtn');
+            if (generateBtn) {
+                generateBtn.onclick = () => requestNewKey();
+            }
             document.getElementById('useExistingBtn').onclick = () => {
                 const key = document.getElementById('existingKey').value.trim();
                 if (key) validateExistingKey(key);
                 else alert('Paste a key');
             };
+            
+            // Update cooldown timer if active
+            if (isCooldown) {
+                const interval = setInterval(() => {
+                    const currentEnd = localStorage.getItem('cooldownEnd');
+                    if (!currentEnd) {
+                        clearInterval(interval);
+                        location.reload();
+                        return;
+                    }
+                    const remaining = parseInt(currentEnd) - Date.now();
+                    if (remaining <= 0) {
+                        localStorage.removeItem('cooldownEnd');
+                        clearInterval(interval);
+                        location.reload();
+                    } else {
+                        const hours = Math.floor(remaining / (60 * 60 * 1000));
+                        const minutes = Math.floor((remaining % (60 * 60 * 1000)) / (60 * 1000));
+                        const seconds = Math.floor((remaining % (60 * 1000)) / 1000);
+                        const msgDiv = document.getElementById('cooldownMsg');
+                        if (msgDiv) {
+                            msgDiv.innerHTML = `⏳ Cooldown: ${hours}h ${minutes}m ${seconds}s until you can generate another key`;
+                        }
+                    }
+                }, 1000);
+            }
         }
         
         function showLoading(div, msg) {
@@ -157,6 +200,8 @@
         
         async function requestNewKey() {
             const div = document.getElementById('mainContent');
+            const btn = document.getElementById('generateBtn');
+            if (btn) btn.disabled = true;
             showLoading(div, 'Requesting new key...');
             
             try {
@@ -172,6 +217,15 @@
                     body: JSON.stringify({ deviceId: deviceId })
                 });
                 
+                if (res.status === 429) {
+                    const error = await res.json();
+                    if (error.cooldownMs) {
+                        localStorage.setItem('cooldownEnd', Date.now() + error.cooldownMs);
+                    }
+                    showError(div, error.error || 'Cooldown active. Please wait.');
+                    return;
+                }
+                
                 const data = await res.json();
                 if (data.token) {
                     window.location.href = `/?token=${data.token}`;
@@ -179,6 +233,7 @@
                     throw new Error('No token');
                 }
             } catch(err) {
+                if (btn) btn.disabled = false;
                 showError(div, 'Cannot connect to API. Make sure your Render API is running.');
             }
         }
@@ -187,6 +242,11 @@
             const div = document.getElementById('mainContent');
             try {
                 const res = await fetch(`${API_URL}/key?token=${token}`);
+                if (res.status === 429) {
+                    const html = await res.text();
+                    div.innerHTML = html;
+                    return;
+                }
                 if (!res.ok) throw new Error('Invalid token');
                 const html = await res.text();
                 div.innerHTML = html;
@@ -215,14 +275,14 @@
                 const data = await res.json();
                 if (data.valid) {
                     if (data.type === 'premium') {
-                        div.innerHTML = `<div class="box"><div class="key-display" style="border-color:#ff0;color:#ff0;">${key}</div><p style="color:#ff0">PREMIUM KEY - Never expires</p><button class="copy-btn" onclick="navigator.clipboard.writeText('${key}')">COPY KEY</button><button onclick="location.reload()">BACK</button></div>`;
+                        div.innerHTML = `<div class="box"><div class="key-display" style="border-color:#ff0;color:#ff0;">${key}</div><p style="color:#ff0">PREMIUM KEY - Never expires</p><p style="color:#ff0">No cooldown restrictions</p><button class="copy-btn" onclick="navigator.clipboard.writeText('${key}')">COPY KEY</button><button onclick="location.reload()">BACK</button></div>`;
                     } else {
                         const expiry = new Date(data.expiresAt).toLocaleString();
                         div.innerHTML = `<div class="box"><div class="key-display">${key}</div><p>Valid key</p><p>Expires: ${expiry}</p><button class="copy-btn" onclick="navigator.clipboard.writeText('${key}')">COPY KEY</button><button onclick="location.reload()">BACK</button></div>`;
                     }
                 } else {
                     let msg = 'Invalid key';
-                    if (data.reason === 'expired') msg = 'This key has expired. Generate a new one.';
+                    if (data.reason === 'expired') msg = 'This key has expired. Generate a new one (6 hour cooldown applies).';
                     if (data.reason === 'wrong_device') msg = 'This key is bound to another device.';
                     showError(div, msg);
                 }
