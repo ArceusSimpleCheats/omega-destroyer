@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Key System</title>
+    <title>Omega Key System</title>
     <style>
         * {
             margin: 0;
@@ -57,7 +57,6 @@
             padding: 15px;
             border-radius: 10px;
             word-break: break-all;
-            letter-spacing: 1px;
             color: #0f0;
             border: 1px solid #0f0;
             margin: 15px 0;
@@ -71,16 +70,11 @@
             font-size: 16px;
             font-weight: bold;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
             width: 100%;
             margin: 10px 0;
         }
         button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(102,126,234,0.4);
-        }
-        button:active {
-            transform: translateY(0);
         }
         .copy-btn {
             background: linear-gradient(135deg, #4facfe, #00f2fe);
@@ -89,25 +83,9 @@
             margin: 15px 0;
             padding: 10px;
             border-radius: 8px;
-            font-size: 14px;
         }
-        .loading {
-            background: rgba(255,255,0,0.1);
-            color: #ff0;
-        }
-        .error {
-            background: rgba(255,0,0,0.1);
-            color: #f00;
-        }
-        .success {
-            background: rgba(0,255,0,0.1);
-            color: #0f0;
-        }
-        .footer {
-            margin-top: 20px;
-            font-size: 12px;
-            color: #555;
-        }
+        .loading { background: rgba(255,255,0,0.1); color: #ff0; }
+        .error { background: rgba(255,0,0,0.1); color: #f00; }
         input {
             width: 100%;
             padding: 12px;
@@ -115,56 +93,35 @@
             border: 1px solid rgba(255,255,255,0.2);
             border-radius: 8px;
             color: white;
-            font-size: 14px;
             margin: 10px 0;
         }
-        input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-        .small {
+        .footer {
+            margin-top: 20px;
             font-size: 12px;
-            color: #888;
-        }
-        hr {
-            border-color: rgba(255,255,255,0.1);
-            margin: 20px 0;
-        }
-        .key-info {
-            font-size: 13px;
-            color: #888;
-            margin-top: 10px;
+            color: #555;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>KEY SYSTEM</h1>
+        <h1>OMEGA KEY SYSTEM</h1>
         <div class="sub">Get your license key</div>
-
-        <div id="mainContent">
-            <!-- Content loaded by JavaScript -->
-        </div>
+        <div id="mainContent"></div>
     </div>
 
     <script>
-        // CONFIGURATION - CHANGE THIS TO YOUR RENDER API URL
         const API_URL = 'https://omega-key.onrender.com';
         
-        // Get token from URL (if coming from renewal)
         const urlParams = new URLSearchParams(window.location.search);
         const token = urlParams.get('token');
         
-        let generatedKey = '';
-        
         async function init() {
-            const contentDiv = document.getElementById('mainContent');
-            
+            const div = document.getElementById('mainContent');
             if (token) {
-                showLoading(contentDiv, 'Generating your key...');
+                showLoading(div, 'Generating your key...');
                 await exchangeTokenForKey(token);
             } else {
-                showMainMenu(contentDiv);
+                showMainMenu(div);
             }
         }
         
@@ -176,176 +133,31 @@
                 </div>
                 <hr>
                 <div class="box">
-                    <p style="margin-bottom: 10px;">Already have a key?</p>
+                    <p>Already have a key?</p>
                     <input type="text" id="existingKey" placeholder="Paste your key here">
                     <button id="useExistingBtn">VALIDATE KEY</button>
                 </div>
                 <div class="footer">Normal keys expire after 6 hours. Premium keys never expire.</div>
             `;
-            
-            document.getElementById('generateBtn').addEventListener('click', () => {
-                requestNewKey();
-            });
-            
-            document.getElementById('useExistingBtn').addEventListener('click', () => {
+            document.getElementById('generateBtn').onclick = () => requestNewKey();
+            document.getElementById('useExistingBtn').onclick = () => {
                 const key = document.getElementById('existingKey').value.trim();
-                if (key) {
-                    validateExistingKey(key);
-                } else {
-                    alert('Please paste a key');
-                }
-            });
+                if (key) validateExistingKey(key);
+                else alert('Paste a key');
+            };
         }
         
-        function showLoading(div, message) {
-            div.innerHTML = `
-                <div class="box">
-                    <div class="status loading">${message}</div>
-                    <div style="text-align: center;">⏳ Processing...</div>
-                </div>
-            `;
+        function showLoading(div, msg) {
+            div.innerHTML = `<div class="box"><div class="status loading">${msg}</div></div>`;
         }
         
-        function showKeyDisplay(div, key, expiresAt) {
-            const expireDate = new Date(expiresAt).toLocaleString();
-            div.innerHTML = `
-                <div class="box">
-                    <p>Your key has been generated.</p>
-                    <div class="key-display" id="keyText">${key}</div>
-                    <button id="copyBtn" class="copy-btn">COPY KEY</button>
-                    <div class="key-info">Expires at: ${expireDate}</div>
-                    <div class="key-info">Paste this key into Game Guardian.</div>
-                    <hr>
-                    <button id="backBtn">BACK TO MENU</button>
-                </div>
-            `;
-            
-            document.getElementById('copyBtn').addEventListener('click', () => {
-                navigator.clipboard.writeText(key);
-                alert('Key copied to clipboard');
-            });
-            
-            document.getElementById('backBtn').addEventListener('click', () => {
-                showMainMenu(div);
-            });
-        }
-        
-        function showPremiumKeyDisplay(div, key) {
-            div.innerHTML = `
-                <div class="box">
-                    <p>Premium key detected.</p>
-                    <div class="key-display" id="keyText" style="border-color:#ff0; color:#ff0;">${key}</div>
-                    <button id="copyBtn" class="copy-btn">COPY KEY</button>
-                    <div class="key-info" style="color:#ff0;">This key NEVER expires.</div>
-                    <hr>
-                    <button id="backBtn">BACK TO MENU</button>
-                </div>
-            `;
-            
-            document.getElementById('copyBtn').addEventListener('click', () => {
-                navigator.clipboard.writeText(key);
-                alert('Key copied to clipboard');
-            });
-            
-            document.getElementById('backBtn').addEventListener('click', () => {
-                showMainMenu(div);
-            });
-        }
-        
-        function showError(div, message) {
-            div.innerHTML = `
-                <div class="box">
-                    <div class="status error">ERROR: ${message}</div>
-                    <button id="backBtn">TRY AGAIN</button>
-                </div>
-            `;
-            document.getElementById('backBtn').addEventListener('click', () => {
-                showMainMenu(div);
-            });
+        function showError(div, msg) {
+            div.innerHTML = `<div class="box"><div class="status error">${msg}</div><button onclick="location.reload()">TRY AGAIN</button></div>`;
         }
         
         async function requestNewKey() {
-            const contentDiv = document.getElementById('mainContent');
-            showLoading(contentDiv, 'Requesting new key...');
-            
-            try {
-                // Generate a device ID for this session
-                let deviceId = localStorage.getItem('deviceId');
-                if (!deviceId) {
-                    deviceId = 'web_' + Math.random().toString(36).substr(2, 16) + Date.now();
-                    localStorage.setItem('deviceId', deviceId);
-                }
-                
-                // Request a token from API
-                const response = await fetch(`${API_URL}/request-new-key-token`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ deviceId: deviceId })
-                });
-                
-                if (!response.ok) {
-                    throw new Error('Server error');
-                }
-                
-                const data = await response.json();
-                
-                if (data.token) {
-                    // Exchange the token for a key
-                    await exchangeTokenForKey(data.token);
-                } else {
-                    throw new Error('Failed to get token');
-                }
-            } catch (error) {
-                console.error(error);
-                showError(contentDiv, 'Could not connect to server. Make sure your API is running.');
-            }
-        }
-        
-        async function exchangeTokenForKey(token) {
-            const contentDiv = document.getElementById('mainContent');
-            
-            try {
-                const response = await fetch(`${API_URL}/key?token=${token}`);
-                
-                if (!response.ok) {
-                    throw new Error('Invalid or expired token');
-                }
-                
-                const html = await response.text();
-                
-                // Parse the HTML response to extract key and expiry
-                const keyMatch = html.match(/<code[^>]*>([^<]+)<\/code>/);
-                const expiryMatch = html.match(/Expires at: ([^<]+)/);
-                
-                if (keyMatch) {
-                    const newKey = keyMatch[1].trim();
-                    const expiry = expiryMatch ? expiryMatch[1] : Date.now() + 6*60*60*1000;
-                    showKeyDisplay(contentDiv, newKey, expiry);
-                } else {
-                    contentDiv.innerHTML = html;
-                    // Add copy button if not present
-                    const keyElement = document.querySelector('code');
-                    if (keyElement && !document.getElementById('copyBtn')) {
-                        const copyBtn = document.createElement('button');
-                        copyBtn.textContent = 'COPY KEY';
-                        copyBtn.className = 'copy-btn';
-                        copyBtn.style.marginTop = '15px';
-                        copyBtn.onclick = () => {
-                            navigator.clipboard.writeText(keyElement.textContent);
-                            alert('Key copied');
-                        };
-                        document.querySelector('.box').appendChild(copyBtn);
-                    }
-                }
-            } catch (error) {
-                console.error(error);
-                showError(contentDiv, 'Invalid or expired link. Please go back and try again.');
-            }
-        }
-        
-        async function validateExistingKey(key) {
-            const contentDiv = document.getElementById('mainContent');
-            showLoading(contentDiv, 'Validating key...');
+            const div = document.getElementById('mainContent');
+            showLoading(div, 'Requesting new key...');
             
             try {
                 let deviceId = localStorage.getItem('deviceId');
@@ -354,33 +166,71 @@
                     localStorage.setItem('deviceId', deviceId);
                 }
                 
-                const response = await fetch(`${API_URL}/validate`, {
+                const res = await fetch(`${API_URL}/request-new-key-token`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ deviceId: deviceId })
+                });
+                
+                const data = await res.json();
+                if (data.token) {
+                    window.location.href = `/?token=${data.token}`;
+                } else {
+                    throw new Error('No token');
+                }
+            } catch(err) {
+                showError(div, 'Cannot connect to API. Make sure your Render API is running.');
+            }
+        }
+        
+        async function exchangeTokenForKey(token) {
+            const div = document.getElementById('mainContent');
+            try {
+                const res = await fetch(`${API_URL}/key?token=${token}`);
+                if (!res.ok) throw new Error('Invalid token');
+                const html = await res.text();
+                div.innerHTML = html;
+            } catch(err) {
+                showError(div, 'Invalid or expired link. Go back and try again.');
+            }
+        }
+        
+        async function validateExistingKey(key) {
+            const div = document.getElementById('mainContent');
+            showLoading(div, 'Validating key...');
+            
+            try {
+                let deviceId = localStorage.getItem('deviceId');
+                if (!deviceId) {
+                    deviceId = 'web_' + Math.random().toString(36).substr(2, 16);
+                    localStorage.setItem('deviceId', deviceId);
+                }
+                
+                const res = await fetch(`${API_URL}/validate`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ key: key, deviceId: deviceId })
                 });
                 
-                const data = await response.json();
-                
+                const data = await res.json();
                 if (data.valid) {
                     if (data.type === 'premium') {
-                        showPremiumKeyDisplay(contentDiv, key);
+                        div.innerHTML = `<div class="box"><div class="key-display" style="border-color:#ff0;color:#ff0;">${key}</div><p style="color:#ff0">PREMIUM KEY - Never expires</p><button class="copy-btn" onclick="navigator.clipboard.writeText('${key}')">COPY KEY</button><button onclick="location.reload()">BACK</button></div>`;
                     } else {
-                        showKeyDisplay(contentDiv, key, data.expiresAt);
+                        const expiry = new Date(data.expiresAt).toLocaleString();
+                        div.innerHTML = `<div class="box"><div class="key-display">${key}</div><p>Valid key</p><p>Expires: ${expiry}</p><button class="copy-btn" onclick="navigator.clipboard.writeText('${key}')">COPY KEY</button><button onclick="location.reload()">BACK</button></div>`;
                     }
                 } else {
-                    let errorMsg = 'Invalid key. ';
-                    if (data.reason === 'expired') errorMsg = 'This key has expired. Generate a new one.';
-                    if (data.reason === 'wrong_device') errorMsg = 'This key is bound to another device.';
-                    showError(contentDiv, errorMsg);
+                    let msg = 'Invalid key';
+                    if (data.reason === 'expired') msg = 'This key has expired. Generate a new one.';
+                    if (data.reason === 'wrong_device') msg = 'This key is bound to another device.';
+                    showError(div, msg);
                 }
-            } catch (error) {
-                console.error(error);
-                showError(contentDiv, 'Could not connect to server.');
+            } catch(err) {
+                showError(div, 'Cannot connect to API');
             }
         }
         
-        // Start the app
         init();
     </script>
 </body>
